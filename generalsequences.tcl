@@ -49,6 +49,12 @@ set ext_force_sheer 0.0
 #Stretch force in +z direction
 set ext_force_stretch 0.0
 
+# Analysis
+set analyse_persistence_length "yes"
+set persistence_length_file "peristence_length.dat"
+set analyse_chain_parameters "no"
+set chain_parameter_file "chain_parameters.dat"
+
 # Set up MD
 setmd time_step $time_step
 thermostat langevin $kT $gamma
@@ -482,8 +488,6 @@ if { $fix_lower_end == "yes" } {
     puts [part 2]
 }
 
-analyze_bps
-
 for { set i 0 } { $i <= [setmd max_part] } { incr i } {
     puts [part $i]
 }
@@ -505,34 +509,28 @@ if { $vtf == "yes" } {
 
 puts "Integrating $int_loops times $steps_per_loop steps."
 
-set fo [open "averagesPOLYseq.dat" "w"]
-set pers [open "persistencePOLYseq.dat" "w"]
-# set forces [open "ForcesPOLYAT.dat" "w"]
-
+if { $analyse_persistence_length == "yes" } {
+    set pers [open "persistencePOLYseq.dat" "w"]
+}
+if { $analyse_chain_parameters == "yes" } {
+    set fo [open "averagesPOLYseq.dat" "w"]
+}
 
 set largest 0
 
-for { set i 1 } { $i <= $int_loops } { incr i } {
-    puts "Loop $i of $int_loops."
+for { set i 0 } { $i <= $int_loops } { incr i } {
+    puts "Loop $i of $int_loops, (time [format %.2g [expr $i*$time_step*$steps_per_loop]] of [format %.2g [expr $total_int_steps*$time_step]])."
     puts [time { integrate $steps_per_loop }]
 
-#     for { set k 1 } { $k <= [setmd max_part] } { incr k } {
-#     puts $forces [part $k print f]
-#     }
+    if { $analyse_chain_parameters == "yes" } {
+	puts $fo [analyze_bps]
+    }
 
-#     for { set k 1 } { $k <= [setmd max_part] } { incr k } {
-#     set x [part $k print f]
-#     set F [expr [lindex $x 0]*[lindex $x 0]+[lindex $x 1]*[lindex $x 1]+[lindex $x 2]*[lindex $x 2]]
-#     if { $F > $largest} {
-#     set largest $F
-#     }
-#     }
-#     puts $forces "$largest"
-    #puts $fo [analyze_bps]
-    #puts $pers [analyze_pl]
+    if { $analyse_persistence_length == "yes" } {
+	puts $pers [analyze_pl]
+    }
 
     if { $vmd == "yes" } { 
-#	after 10
 	imd positions
     }
 
