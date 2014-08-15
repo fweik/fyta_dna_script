@@ -1,341 +1,69 @@
-setmd time_step 0.1
+#
+# (C) Copyright 2014, Damaris Holder, Florian Weik
+#
+# All rights reserved. 
+#
+# This software is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. 
+#
+
+source io.tcl
+source analysis.tcl
+
+# General MD parameters
+set time_step 0.1
+set total_int_steps 200000000
+set steps_per_loop 10000
+set skin 1.0
+
+# Langevin parameters
 # kT = 0.025eV ~ 300K (k_B = 8.617e-5 eV/K)
-# thermostat langevin 0.025 0.0000001
-# thermostat langevin 0.025 0.0001 - 11
-# thermostat langevin 0.025 0.001  - 13
-# thermostat langevin 0.025 0.01   - 18
-# thermostat langevin 0.025 0.1    - 100
-thermostat langevin 0.026 1
-setmd skin 0.5
+set kT 0.026
+set gamma 1.0
+
+# Output options
 set vmd "no"
-
-set vtf_filename "/work/fweik/dna.vtf"
 set vtf "yes"
+set vtf_filename "/work/fweik/dna.vtf"
 
-# Along the molecule
+# Box geometry
+# Length along the molecule
 set box_z 2000
 # Other directions
 set box_xy 1000
+# Shift along molecule axis
 set zshift 8.5
+# Shift in other directions
 set center_xy [expr 0.5*$box_xy]
 
+# Molecule
 set n_basepairs 20
-
-set total_int_steps 200000000
-set steps_per_loop 10000
-
+set configuration_filename "configurations/1000bp_conf.dat"
+set sequence_filename "sequences/Sequence1.dat"
+# Fix one end of molecule?
 set fix_lower_end "yes"
-
+# External forces on molecule
 #Sheer force in +x direction
 set ext_force_sheer 0.0
-
 #Stretch force in +z direction
 set ext_force_stretch 0.0
 
-set sequence [open Sequence1.dat]
-
+# Set up MD
+setmd time_step $time_step
+thermostat langevin $kT $gamma
+setmd skin $skin
 setmd box_l $box_xy $box_xy $box_z
-
 cellsystem layered
-
- set filename 1000bp_config.dat
-#set filename 200bp_config.dat
-# set filename 200bp_config.dat
-# set filename 16bp_config.dat
-# set filename 8bp_config.dat
-
-read_configuration $n_basepairs $filename
-
-if { $fix_lower_end == "yes" } {
-    part 0 fix
-    part 2 fix
-
-    puts [part 0]
-    puts [part 2]
-}
-
-set ladderlist []
-while {1} {
-    set line [gets $sequence]
-    if {[eof $sequence]} {
-        close $sequence
-        break
-    }
-    lappend ladderlist $line
-}
-
 set int_loops [expr $total_int_steps/$steps_per_loop]
 
-proc read_configuration { n_basepairs filename } {
-    set v1 0
-    set v2 0
-    set v3 0
-    set v4 0
+# Read config
+read_configuration $n_basepairs $configuration_filename
 
-    global center_xy zshift
+# Read sequence
+set ladderlist [read_sequence $sequence_filename]
 
-    set n_particles [expr 4*$n_basepairs]
-
-    set chan [open $filename r]
-
-    # Read in configuration
-
-    set lastid 0
-    while {([gets $chan line] >= 0) && ($lastid < $n_particles)} {
-	set vcnt [scan $line %s%s%s%s v1 v2 v3 v4]
-
-	if { $v1 == 0 } {	        
-	    # center particles in x and y
-	    set type [expr $lastid % 4]
-	    if { $type == 0 || $type == 2 } {
-		set q -1
-	    } else {
-		set q 0
-	    }
-	      
-	    part $lastid pos [expr $center_xy + $v2] [expr $center_xy + $v3] [expr $v4 + $zshift] type $type q $q
-	    incr lastid
-	}
-    }
-    if { $lastid != $n_particles } {
-	puts "Not enough particles in file '$filename' to read [expr $n_basepairs/4] basepairs."
-	exit
-    }   
-}
-
-
-# Analysis functions
-
-proc vecdot {v1 v2} {
-    if {[llength $v1]!=[llength $v2]} {
-    error "Vectors must be of equal length"
-    }
-   set dot [expr [lindex $v1 0]*[lindex $v2 0]+[lindex $v1 1]*[lindex $v2 1]+[lindex $v1 2]*[lindex $v2 2]]
-   return $dot
-}
-
-proc analyze_pl { } {
-    set Pi 3.14159
-    set data1 [list]
-    set data2 [list]
-    
-  for {set j 0} { $j < [expr ([setmd max_part] - 3)/4] } {incr j} {
-    set m [expr $j*4]
-    set s1 $m
-    
-    set b1 [expr $s1 + 1]
-    set b2 [expr $s1 + 3]
-    set b3 [expr $s1 + 5]
-    set b4 [expr $s1 + 7]
-    
-    set x1 [part $b1 pr pos]
-    set x2 [part $b2 pr pos]
-    set x3 [part $b3 pr pos]
-    set x4 [part $b4 pr pos]
-    
-    set m12x [expr (([lindex $x2 0] + [lindex $x1 0])/2)]
-    set m12y [expr (([lindex $x2 1] + [lindex $x1 1])/2)]
-    set m12z [expr (([lindex $x2 2] + [lindex $x1 2])/2)]
-    set m34x [expr (([lindex $x4 0] + [lindex $x3 0])/2)]
-    set m34y [expr (([lindex $x4 1] + [lindex $x3 1])/2)]
-    set m34z [expr (([lindex $x4 2] + [lindex $x3 2])/2)]
-    
-    set v1x [expr ($m34x-$m12x)]
-    set v1y [expr ($m34y-$m12y)]
-    set v1z [expr ($m34z-$m12z)]
-    set v1 [list $v1x $v1y $v1z]
-    set lent1 [expr {sqrt($v1x*$v1x+$v1y*$v1y+$v1z*$v1z)}]
-    
-#     set cosang [list]
-#     set actuallengths [list]
-    
-    # one loop in order to avoid double counting
-    # loop: from base s1 to last base
-    set len [list $lent1]
-    set cosang [list]
-    set actuallengths [list]
-    
-#     [expr ([setmd max_part] - $s1)/4 - 2]
-    
-    for { set i 0 } { $i <= [expr ([setmd max_part] - $s1)/4 - 1] } { incr i } {
-      set r [expr $i*4 + 1]
-      set k [expr $i*4 + 3]
-      
-      set b3 [expr $s1 + $r]
-      set b4 [expr $s1 + $k]
-      set b5 [expr $s1 + $r + 4]
-      set b6 [expr $s1 + $k + 4]
-      
-      set x3 [part $b3 pr pos]
-      set x4 [part $b4 pr pos]
-      set x5 [part $b5 pr pos]
-      set x6 [part $b6 pr pos]
-      
-      set m34x [expr (([lindex $x4 0] + [lindex $x3 0])/2)]
-      set m34y [expr (([lindex $x4 1] + [lindex $x3 1])/2)]
-      set m34z [expr (([lindex $x4 2] + [lindex $x3 2])/2)]
-      set m56x [expr (([lindex $x6 0] + [lindex $x5 0])/2)]
-      set m56y [expr (([lindex $x6 1] + [lindex $x5 1])/2)]
-      set m56z [expr (([lindex $x6 2] + [lindex $x5 2])/2)]
-
-      set v2x [expr ($m56x-$m34x)]
-      set v2y [expr ($m56y-$m34y)]
-      set v2z [expr ($m56z-$m34z)]
-      set v2 [list $v2x $v2y $v2z]
-      set lent2 [expr {sqrt($v2x*$v2x+$v2y*$v2y+$v2z*$v2z)}]
-#       puts "number $i: $lent2"
-      
-#       lappend len $lent2
-      lappend len [expr [lindex $len end] + $lent2]
-      set actuallengths [lreplace $len 0 0]
-      
-      set dotprod [vecdot $v1 $v2]
-      lappend cosang [expr $dotprod/($lent1 * $lent2)]
-      
-    }
-#     puts "S1: $s1"
-#     puts "ANGLES: $cosang"
-#     puts "LENGTHS: $actuallengths"
-  lappend data1 [concat $cosang]
-  lappend data2 [concat $actuallengths]
-#      puts "DATA1: $data1"
-#      puts "DATA1: [concat $data1]"
-#      puts "DATA2: $data2"
-
-#   puts "ang $j: $actuallengths"
-#   puts "data2: $data2"
-    
-  }
-  
-  set arclengths [list]
-  for { set k 0 } { $k <= [expr ([setmd max_part]/4) - 2] } { incr k } {
-    set value 0.0
-    for { set r 0 } { $r <= [expr ([setmd max_part]/4) - 2 - $k] } { incr r } {
-#       puts "r: $r"
-#     puts "lindex $k: [lindex $data2 $r $k]"
-    set value [expr $value + [lindex $data2 $r $k]]
-    }
-    set value [expr $value/((([setmd max_part]+1)/4) - 2 - $k)]
-    lappend arclengths $value
-#     puts "VALUE: $value"
-  }
-
-  set angles [list]
-  for { set k 0 } { $k <= [expr ([setmd max_part]/4) - 2] } { incr k } {
-    set value 0.0
-    for { set r 0 } { $r <= [expr ([setmd max_part]/4) - 2 - $k] } { incr r } {
-#     puts "lindex $k: [lindex $data1 $r $k]"
-    set value [expr $value + [lindex $data1 $r $k]]
-    }
-    set value [expr $value/((([setmd max_part]+1)/4) - 2 - $k)]
-    lappend angles $value
-#     puts "VALUE: $value"
-  }
-  
-  #number of evaluated basepairs:
-  set nbp [expr ([setmd max_part]+1)/4-3]
-  set arclengths [lreplace $arclengths $nbp $nbp]
-  set angles [lreplace $angles $nbp $nbp]
-  
-#   return [concat "[lindex $data2 0] [lindex $data1 0]"]
-  return [concat "$arclengths $angles"]
-  }
-
-proc analyze_bp { s1 } {
-    set Pi 3.14159
-
-    set bond [lindex [part $s1 pr bond] 0]
-
-    set s2 [expr $s1 + 2]
-    set b1 [expr $s1 + 1]
-    set b2 [expr $s1 + 3]
-    
-    set x1 [part $s1 pr pos]
-    set x2 [part $s2 pr pos]
-
-    set dx [expr ([lindex $x2 0] - [lindex $x1 0])]
-    set dy [expr ([lindex $x2 1] - [lindex $x1 1])]
-    set dz [expr ([lindex $x2 2] - [lindex $x1 2])]
-    set rcc [expr sqrt($dx*$dx + $dy*$dy + $dz*$dz)]
-
-    set x2 [part $b1 pr pos]
-    set dxcb [expr ([lindex $x2 0] - [lindex $x1 0])]
-    set dycb [expr ([lindex $x2 1] - [lindex $x1 1])]
-    set dzcb [expr ([lindex $x2 2] - [lindex $x1 2])]
-    set rcb1 [expr sqrt($dxcb*$dxcb + $dycb*$dycb + $dzcb*$dzcb)]
-
-    set psi1 [expr ($dx*$dxcb + $dy*$dycb + $dz*$dzcb)/($rcb1*$rcc)]
-    set psi1 [expr 180. * acos($psi1)/$Pi]
-
-    set x1 [part $s2 pr pos]
-    set x2 [part $b2 pr pos]
-
-    set dxcb [expr ([lindex $x2 0] - [lindex $x1 0])]
-    set dycb [expr ([lindex $x2 1] - [lindex $x1 1])]
-    set dzcb [expr ([lindex $x2 2] - [lindex $x1 2])]
-    set rcb2 [expr sqrt($dxcb*$dxcb + $dycb*$dycb + $dzcb*$dzcb)]
-    
-    set psi2 [expr -($dx*$dxcb + $dy*$dycb + $dz*$dzcb)/($rcb2*$rcc)]
-    set psi2 [expr 180. * acos($psi2)/$Pi]
-
-    set x1 [part $b2 pr pos]
-    set x2 [part $b1 pr pos]
-    set dx [expr abs(([lindex $x2 0] - [lindex $x1 0]))]
-    set dy [expr abs(([lindex $x2 1] - [lindex $x1 1]))]
-    set dz [expr abs(([lindex $x2 2] - [lindex $x1 2]))]
-    set rhb [expr sqrt($dx*$dx + $dy*$dy + $dz*$dz)]
-
-    return  [list $rcc $rcb1 $rcb2 $rhb $psi1 $psi2]
-}
-
-proc analyze_bps {} {
-    set rcc_avg 0.0
-    set rcb1_avg 0.0
-    set rcb2_avg 0.0
-    set rhb_avg 0.0
-    set psi1_avg 0.0
-    set psi2_avg 0.0
-    set n 0
-
-    for { set i 0 } { $i <= [setmd max_part] } { incr i } {
-	set type [part $i pr type]
-	if { $type == 0 } {
-	    set bp [analyze_bp $i]
-	    set rcc_avg [expr $rcc_avg + [lindex $bp 0]]
-	    set rcb1_avg [expr $rcb1_avg + [lindex $bp 1]]
-	    set rcb2_avg [expr $rcb2_avg + [lindex $bp 2]]
-	    set rhb_avg [expr $rhb_avg + [lindex $bp 3]]
-	    set psi1_avg [expr $psi1_avg + [lindex $bp 4]]
-	    set psi2_avg [expr $psi2_avg + [lindex $bp 5]]
-
-	    incr n
-	}
-    }
-
-    set rcc_avg [expr $rcc_avg / $n]
-    set rcb1_avg [expr $rcb1_avg / $n]
-    set rcb2_avg [expr $rcb2_avg / $n]
-    set rhb_avg [expr $rhb_avg / $n]
-    set psi1_avg [expr $psi1_avg / $n]
-    set psi2_avg [expr $psi2_avg / $n]
-
-    puts "<rcc> $rcc_avg, <rcb1> $rcb1_avg, <rcb2> $rcb2_avg, <rhb> $rhb_avg, <psi1> $psi1_avg, <psi2> $psi2_avg"
-    return [list $rcc_avg $rcb1_avg $rcb2_avg $rhb_avg $psi1_avg $psi2_avg]
-}
-
-# Read in configuration
-
-set lastid 0
-while {[gets $chan line] >= 0} {
-    set vcnt [scan $line %s%s%s%s v1 v2 v3 v4]
-
-    if { $v1 == 0 } {	        
-	# center particles in x and y
-	part $lastid pos [expr $center_xy + $v2] [expr $center_xy + $v3] [expr $v4 + $zshift] type [expr $lastid % 4]
-	puts [part $lastid pr id pos]
-	incr lastid
-    }
-}
+# Configure molecule
 
 # setting charges
 for { set i 0 } { $i <= [setmd max_part] } { incr i } {
@@ -746,13 +474,21 @@ for { set i 0 } { $i <= [setmd max_part] } { incr i } {
     
 }
 
-integrate 0
+if { $fix_lower_end == "yes" } {
+    part 0 fix
+    part 2 fix
+
+    puts [part 0]
+    puts [part 2]
+}
 
 analyze_bps
 
 for { set i 0 } { $i <= [setmd max_part] } { incr i } {
     puts [part $i]
 }
+
+# Prepare output
 
 if { $vmd == "yes" } {
   prepare_vmd_connection "dna_bla"
@@ -766,10 +502,6 @@ if { $vtf == "yes" } {
     writevsf $vtfchan
     writevcf $vtfchan
 }
-
-#puts "Center of Mass is [analyze centermass 0]"
-
-puts "Force calculation takes [time { integrate 0 }]"
 
 puts "Integrating $int_loops times $steps_per_loop steps."
 
