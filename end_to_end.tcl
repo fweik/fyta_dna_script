@@ -1,3 +1,4 @@
+
 #
 # (C) Copyright 2014, Damaris Holder, Florian Weik
 #
@@ -15,7 +16,8 @@ source interactions.tcl
 # General MD parameters
 set time_step 0.1
 set total_int_steps 200000000
-set steps_per_loop 10000
+set steps_per_loop 1000
+set equilibration_loops 1
 set skin 1.0
 
 # Langevin parameters
@@ -25,21 +27,11 @@ set gamma 1.0
 
 # Output options
 set vmd "no"
-set vtf "yes"
+set vtf "no"
 set vtf_filename "/work/fweik/dna.vtf"
 
-# Box geometry
-# Length along the molecule
-set box_z 2000
-# Other directions
-set box_xy 1000
-# Shift along molecule axis
-set zshift 8.5
-# Shift in other directions
-set center_xy [expr 0.5*$box_xy]
-
 # Molecule
-set n_basepairs 200
+set n_basepairs 10
 set configuration_filename "configurations/1000bp_conf.dat"
 set sequence_filename "sequences/Sequence1.dat"
 # Fix one end of molecule?
@@ -50,11 +42,23 @@ set ext_force_sheer 0.0
 #Stretch force in +z direction
 set ext_force_stretch 0.0
 
+# Box geometry
+# Length along the molecule
+set box_z [expr 4*$n_basepairs + 100.]
+# Other directions
+set box_xy 250.
+# Shift along molecule axis
+set zshift 50.
+# Shift in other directions
+set center_xy [expr 0.5*$box_xy]
+
 # Analysis
 set analyse_persistence_length "no"
 set persistence_length_file "peristence_length.dat"
 set analyse_chain_parameters "no"
 set chain_parameter_file "chain_parameters.dat"
+set analyse_end_to_end_dist "yes"
+set end_to_end_file "ete.dat"
 
 # Set up MD
 setmd time_step $time_step
@@ -76,7 +80,6 @@ if { $n_basepairs > [expr [llength $ladderlist]] } {
 }
 
 # Configure molecule
-
 set_charges
 
 set_masses $ladderlist
@@ -99,9 +102,9 @@ if { $fix_lower_end == "yes" } {
     part 2 fix
 }
 
-for { set i 0 } { $i <= [setmd max_part] } { incr i } {
-    puts [part $i]
-}
+#for { set i 0 } { $i <= [setmd max_part] } { incr i } {
+#    puts [part $i]
+#}
 
 # Prepare output
 
@@ -121,13 +124,25 @@ if { $vtf == "yes" } {
 puts "Integrating $int_loops times $steps_per_loop steps."
 
 if { $analyse_persistence_length == "yes" } {
-    set pers [open "persistencePOLYseq.dat" "w"]
+    set pers [open $persistence_length_file "w"]
 }
 if { $analyse_chain_parameters == "yes" } {
-    set fo [open "averagesPOLYseq.dat" "w"]
+    set fo [open $chain_parameter_file "w"]
 }
 
+if { $analyse_end_to_end_dist == "yes" } {
+    set e2e [open $chain_parameter_file "w"]    
+}
+
+
 set largest 0
+
+for { set i 0 } { $i <= $equilibration_loops } { incr i } {
+    puts "Equilibration Loop $i of $equilibration_loops"
+    analyze_bps
+    puts "<theta_twist> = [analyze_stacking_all]"
+    integrate $steps_per_loop    
+}
 
 for { set i 0 } { $i <= $int_loops } { incr i } {
     puts "Loop $i of $int_loops, (time [format %.2g [expr $i*$time_step*$steps_per_loop]] of [format %.2g [expr $total_int_steps*$time_step]])."
@@ -141,6 +156,11 @@ for { set i 0 } { $i <= $int_loops } { incr i } {
 	puts $pers [analyze_pl]
     }
 
+    if { $analyse_end_to_end_dist == "yes" } {
+	puts $e2e [analyze_end_to_end_sq]
+	puts [analyze_end_to_end_sq]
+    }
+
     if { $vmd == "yes" } { 
 	imd positions
     }
@@ -150,4 +170,15 @@ for { set i 0 } { $i <= $int_loops } { incr i } {
     }
 }
 
-close $fo
+
+if { $analyse_persistence_length == "yes" } {
+    close pers
+}
+if { $analyse_chain_parameters == "yes" } {
+    close fo
+}
+
+if { $analyse_end_to_end_dist == "yes" } {
+    close e2e     
+}
+

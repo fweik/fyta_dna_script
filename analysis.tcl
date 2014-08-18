@@ -16,6 +16,36 @@ proc vecdot {v1 v2} {
    return $dot
 }
 
+proc vecadd {c1 v1 c2 v2} {
+    if {[llength $v1]!=[llength $v2]} {
+	error "Vectors must be of equal length"
+    }
+    for { set i 0 } { $i < [llength $v1] } { incr i } {
+	lappend ret [expr $c1*[lindex $v1 $i] + $c2*[lindex $v2 $i]]
+    }
+    return $ret
+}
+
+proc analyze_end_to_end_sq { } {
+    set s1b 0
+    set s2b 2
+    
+    set s1e [expr [setmd max_part] - 3]
+    set s2e [expr $s1e + 2]
+
+    set r1b [part $s1b pr pos]
+    set r2b [part $s2b pr pos]
+    set r1e [part $s1e pr pos]
+    set r2e [part $s2e pr pos]        
+
+    set r1 [vecadd 0.5 $r1b 0.5 $r2b]
+    set r2 [vecadd 0.5 $r1e 0.5 $r2e]
+
+    set R [vecadd 1.0 $r1 -1.0 $r2]
+
+    return [vecdot $R $R]
+}
+
 proc analyze_pl { } {
     set Pi 3.14159
     set data1 [list]
@@ -224,3 +254,71 @@ proc analyze_bps {} {
     puts "<rcc> $rcc_avg, <rcb1> $rcb1_avg, <rcb2> $rcb2_avg, <rhb> $rhb_avg, <psi1> $psi1_avg, <psi2> $psi2_avg"
     return [list $rcc_avg $rcb1_avg $rcb2_avg $rhb_avg $psi1_avg $psi2_avg]
 }
+
+proc analyze_stacking { s1i } {
+    set Pi 3.14159
+
+    set s2i [expr $s1i + 2]
+    set b1i [expr $s1i + 1]
+    set s1j [expr $s1i + 4]
+    set s2j [expr $s1i + 6]
+
+    set x1 [part $s2i pr pos]
+    set x2 [part $s1i pr pos]
+
+    set rccix [expr ([lindex $x2 0] - [lindex $x1 0])]
+    set rcciy [expr ([lindex $x2 1] - [lindex $x1 1])]
+    set rcciz [expr ([lindex $x2 2] - [lindex $x1 2])]
+    set rccil [expr sqrt($rccix*$rccix + $rcciy*$rcciy + $rcciz*$rcciz)]
+
+    set x1 [part $s2j pr pos]
+    set x2 [part $s1j pr pos]
+
+    set rccjx [expr ([lindex $x2 0] - [lindex $x1 0])]
+    set rccjy [expr ([lindex $x2 1] - [lindex $x1 1])]
+    set rccjz [expr ([lindex $x2 2] - [lindex $x1 2])]
+    set rccjl [expr sqrt($rccjx*$rccjx + $rccjy*$rccjy + $rccjz*$rccjz)]
+
+    set x1 [part $b1i pr pos]
+    set x2 [part $s1i pr pos]
+    set dxcb [expr ([lindex $x2 0] - [lindex $x1 0])]
+    set dycb [expr ([lindex $x2 1] - [lindex $x1 1])]
+    set dzcb [expr ([lindex $x2 2] - [lindex $x1 2])]
+    set rcb1 [expr sqrt($dxcb*$dxcb + $dycb*$dycb + $dzcb*$dzcb)]
+    
+    # n1 = rcci x rcb1
+    set nx [expr $rcciy*$dzcb - $rcciz*$dycb]
+    set ny [expr $rcciz*$dxcb - $rccix*$dzcb]
+    set nz [expr $rccix*$dycb - $rcciy*$dxcb]
+    set nl [expr sqrt($nx*$nx + $ny*$ny + $nz*$nz)]
+
+    set nx [expr $nx/$nl]
+    set ny [expr $ny/$nl]
+    set nz [expr $nz/$nl]
+
+    set rccj_parallel [expr ($nx*$rccjx+$ny*$rccjy+$nz*$rccjz)]
+    
+    set rpx [expr $rccjx - $rccj_parallel*$nx]
+    set rpy [expr $rccjy - $rccj_parallel*$ny]
+    set rpz [expr $rccjz - $rccj_parallel*$nz]
+    set rpl [expr sqrt($rpx*$rpx + $rpy*$rpy + $rpz*$rpz)]
+    
+    set cos_theta [expr ($rpx*$rccix + $rpy*$rcciy + $rpz*$rcciz)/($rpl*$rccil)]
+
+    return [expr 180.*acos($cos_theta)/$Pi]
+}
+
+proc analyze_stacking_all {} {
+    set theta_avg 0.0
+    set n 0
+    for { set i 0 } { $i <= [expr [setmd max_part] - 4] } { incr i } {
+	set type [part $i pr type]
+	if { $type == 0 } {
+	    set theta_avg [expr $theta_avg + [analyze_stacking $i]]
+	    incr n
+	}    
+    }
+    return [expr $theta_avg/$n]
+}
+
+
