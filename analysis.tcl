@@ -46,6 +46,12 @@ proc analyze_end_to_end_sq { } {
     return [vecdot $R $R]
 }
 
+proc analyze_contour_length {} {
+    for { set i 0 } { $i < [expr [setmd max_part]/4 - 1] } { incr i } {
+	
+    }
+}
+
 proc analyze_pl { } {
     set Pi 3.14159
     set data1 [list]

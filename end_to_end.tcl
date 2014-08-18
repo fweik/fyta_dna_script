@@ -15,9 +15,9 @@ source interactions.tcl
 
 # General MD parameters
 set time_step 0.1
-set total_int_steps 200000000
+set total_int_steps 300000
 set steps_per_loop 1000
-set equilibration_loops 1
+set equilibration_loops 300
 set skin 1.0
 
 # Langevin parameters
@@ -31,26 +31,16 @@ set vtf "no"
 set vtf_filename "/work/fweik/dna.vtf"
 
 # Molecule
-set n_basepairs 10
+set n_basepairs 200
 set configuration_filename "configurations/1000bp_conf.dat"
-set sequence_filename "sequences/Sequence1.dat"
+set sequence_filename "sequences/Sequence_polyAT.dat"
 # Fix one end of molecule?
-set fix_lower_end "yes"
+set fix_lower_end "no"
 # External forces on molecule
 #Sheer force in +x direction
 set ext_force_sheer 0.0
 #Stretch force in +z direction
 set ext_force_stretch 0.0
-
-# Box geometry
-# Length along the molecule
-set box_z [expr 4*$n_basepairs + 100.]
-# Other directions
-set box_xy 250.
-# Shift along molecule axis
-set zshift 50.
-# Shift in other directions
-set center_xy [expr 0.5*$box_xy]
 
 # Analysis
 set analyse_persistence_length "no"
@@ -59,6 +49,28 @@ set analyse_chain_parameters "no"
 set chain_parameter_file "chain_parameters.dat"
 set analyse_end_to_end_dist "yes"
 set end_to_end_file "ete.dat"
+set analyse_avg_end_to_end_dist "yes"
+set avg_end_to_end_file "avg_ete.dat" 
+
+# Check for command lineparameters
+
+if { $argc == 3 } {
+    set n_basepairs [lindex $argv 0]
+    set end_to_end_file [lindex $argv 1]
+    set avg_end_to_end_file [lindex $argv 2]
+}
+
+puts "n_basepairs $n_basepairs, end_to_end_file $end_to_end_file avg_end_to_end_file $avg_end_to_end_file"
+
+# Box geometry
+# Length along the molecule
+set box_z [expr 4*$n_basepairs + 400.]
+# Other directions
+set box_xy 250.
+# Shift along molecule axis
+set zshift 200.
+# Shift in other directions
+set center_xy [expr 0.5*$box_xy]
 
 # Set up MD
 setmd time_step $time_step
@@ -131,16 +143,21 @@ if { $analyse_chain_parameters == "yes" } {
 }
 
 if { $analyse_end_to_end_dist == "yes" } {
-    set e2e [open $chain_parameter_file "w"]    
+    set e2e [open $end_to_end_file "w"]    
 }
 
+if { $analyse_avg_end_to_end_dist == "yes" } {
+    set samples 0
+    set e2e_avg 0.0
+    set e2e_avg2 0.0
+}
 
 set largest 0
 
-for { set i 0 } { $i <= $equilibration_loops } { incr i } {
-    puts "Equilibration Loop $i of $equilibration_loops"
-    analyze_bps
-    puts "<theta_twist> = [analyze_stacking_all]"
+for { set i 0 } { $i < $equilibration_loops } { incr i } {
+    puts "Equilibration Loop [expr $i+1] of $equilibration_loops"
+#    analyze_bps
+#    puts "<theta_twist> = [analyze_stacking_all]"
     integrate $steps_per_loop    
 }
 
@@ -161,6 +178,13 @@ for { set i 0 } { $i <= $int_loops } { incr i } {
 	puts [analyze_end_to_end_sq]
     }
 
+    if { $analyse_avg_end_to_end_dist == "yes" } {
+	set R2 [analyze_end_to_end_sq]
+	set e2e_avg [expr $e2e_avg + $R2]
+	set e2e_avg2 [expr $e2e_avg2 + $R2*$R2]
+	incr samples
+    }
+
     if { $vmd == "yes" } { 
 	imd positions
     }
@@ -170,15 +194,20 @@ for { set i 0 } { $i <= $int_loops } { incr i } {
     }
 }
 
+if { $analyse_avg_end_to_end_dist == "yes" } {
+    set avg_e2e_fd [open $avg_end_to_end_file "a"]
+    set mean [expr $e2e_avg/$samples]
+    puts $avg_e2e_fd "$n_basepairs $mean [expr { sqrt( $e2e_avg2 / $samples - $mean*$mean ) }]"
+    close $avg_e2e_fd
+}
 
 if { $analyse_persistence_length == "yes" } {
-    close pers
+    close $pers
 }
 if { $analyse_chain_parameters == "yes" } {
-    close fo
+    close $fo
 }
-
 if { $analyse_end_to_end_dist == "yes" } {
-    close e2e     
+    close $e2e     
 }
 
