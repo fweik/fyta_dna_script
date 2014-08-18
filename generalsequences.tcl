@@ -39,7 +39,7 @@ set zshift 8.5
 set center_xy [expr 0.5*$box_xy]
 
 # Molecule
-set n_basepairs 200
+set n_basepairs 250
 set configuration_filename "configurations/1000bp_conf.dat"
 set sequence_filename "sequences/Sequence1.dat"
 # Fix one end of molecule?
@@ -69,6 +69,11 @@ read_configuration $n_basepairs $configuration_filename
 
 # Read sequence
 set ladderlist [read_sequence $sequence_filename]
+
+if { $n_basepairs > [expr [llength $ladderlist]] } {
+    puts "Sequence '$sequence_filename' is too short for molecule of length $n_basepairs."
+    exit
+}
 
 # Configure molecule
 
