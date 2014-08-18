@@ -139,6 +139,12 @@ proc setup_bonded_interactions { ladderlist } {
     set f2 -0.132
     set f3 +0.215
 
+    # Backbone interaction
+    set c2 18.773
+    set c4 0.333
+    set r0bb 4.976
+
+    inter 0 quartic [expr 2.*$c2] [expr 4.*$c4] $r0bb
 
     # adenyn and thymin #alpha=1/l
     inter 211 cg_dna_basepair [list $r0AT $alphaAT $E0AT $kdAT $sigmaA $sigmaT $phiA $phiT $E0sb $r0sb $alphasb $f2 $f3 ]
@@ -244,6 +250,8 @@ proc setup_bonded_interactions { ladderlist } {
 		    if { $t == 9 } {
 			part $i bond 320 [expr $i+1] [expr $i+3] [expr $i+2] [expr $i+4] [expr $i+5] [expr $i+7] [expr $i+6]
 		    }
+		    # Backbone bond with next bp sugar
+		    part $i bond 0 [expr $i+4]
 		}
 	    }}
 	# Sugar Right
@@ -258,6 +266,8 @@ proc setup_bonded_interactions { ladderlist } {
 		if { $i <= [expr [setmd max_part] - 4] } {
 		    # Angular potential with next sugar and base
 		    part $i bond 122 [expr $i+4] [expr $i+1]
+		    # Backbone bond with next bp sugar
+		    part $i bond 0 [expr $i+4]
 		}
 	    }}
 
@@ -293,6 +303,8 @@ proc setup_bonded_interactions { ladderlist } {
 		    if { $t == 9 } {
 			part $i bond 324 [expr $i+1] [expr $i+3] [expr $i+2] [expr $i+4] [expr $i+5] [expr $i+7] [expr $i+6]
 		    }
+		    # Backbone bond with next bp sugar
+		    part $i bond 0 [expr $i+4]
 		}
 	    }}
 	# Sugar Right
@@ -307,6 +319,8 @@ proc setup_bonded_interactions { ladderlist } {
 		if { $i <= [expr [setmd max_part] - 4] } {
 		    # Angular potential with next sugar and base
 		    part $i bond 112 [expr $i+4] [expr $i+1]
+		    # Backbone bond with next bp sugar
+		    part $i bond 0 [expr $i+4]
 		}
 	    }}
 
@@ -342,6 +356,8 @@ proc setup_bonded_interactions { ladderlist } {
 		    if { $t == 9 } {
 			part $i bond 317 [expr $i+1] [expr $i+3] [expr $i+2] [expr $i+4] [expr $i+5] [expr $i+7] [expr $i+6]
 		    }
+		    # Backbone bond with next bp sugar
+		    part $i bond 0 [expr $i+4]
 		}
 	    }}
 	# Sugar Right
@@ -356,6 +372,8 @@ proc setup_bonded_interactions { ladderlist } {
 		if { $i <= [expr [setmd max_part] - 4] } {
 		    # Angular potential with next sugar and base
 		    part $i bond 142 [expr $i+4] [expr $i+1]
+		    # Backbone bond with next bp sugar
+		    part $i bond 0 [expr $i+4]
 		}
 	    }}
 
@@ -391,6 +409,8 @@ proc setup_bonded_interactions { ladderlist } {
 		    if { $t == 9 } {
 			part $i bond 313 [expr $i+1] [expr $i+3] [expr $i+2] [expr $i+4] [expr $i+5] [expr $i+7] [expr $i+6]
 		    }
+		    # Backbone bond with next bp sugar
+		    part $i bond 0 [expr $i+4]
 		}
 	    }}
 	# Sugar Right
@@ -405,6 +425,8 @@ proc setup_bonded_interactions { ladderlist } {
 		if { $i <= [expr [setmd max_part] - 4] } {
 		    # Angular potential with next sugar and base
 		    part $i bond 132 [expr $i+4] [expr $i+1]
+		    # Backbone bond with next bp sugar
+		    part $i bond 0 [expr $i+4]
 		}
 	    }}
 	

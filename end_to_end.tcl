@@ -96,10 +96,6 @@ set_charges
 
 set_masses $ladderlist
 
-# non-bonded IA between the sugars
-#inter 0 0 lj-gen 1 1 2.5 0 4.976 -2 -4 18.773 -0.333
-#inter 2 2 lj-gen 1 1 2.5 0 4.976 -2 -4 18.773 -0.333
-
 # electrostatic interactions
 set lB 561
 set lambdaDB 9.6
