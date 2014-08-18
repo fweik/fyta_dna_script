@@ -26,6 +26,10 @@ proc vecadd {c1 v1 c2 v2} {
     return $ret
 }
 
+proc veclen {v1} {
+    return [expr { sqrt( [vecdot $v1 $v1] ) }]
+}
+
 proc analyze_end_to_end_sq { } {
     set s1b 0
     set s2b 2
@@ -46,10 +50,29 @@ proc analyze_end_to_end_sq { } {
     return [vecdot $R $R]
 }
 
+
+
 proc analyze_contour_length {} {
+    set l 0.0
     for { set i 0 } { $i < [expr [setmd max_part]/4 - 1] } { incr i } {
-	
+	set s1i [expr 4*$i]
+	set s2i [expr $s1i + 2]
+	set s1j [expr $s1i + 4]
+	set s2j [expr $s1i + 6]
+
+	set r1i [part $s1i pr pos]
+	set r2i [part $s2i pr pos]
+	set r1j [part $s1j pr pos]
+	set r2j [part $s2j pr pos]        
+
+	set r1 [vecadd 0.5 $r1i 0.5 $r2i]
+	set r2 [vecadd 0.5 $r1j 0.5 $r2j]
+
+	set R [vecadd 1.0 $r1 -1.0 $r2]
+
+	set l [expr $l + [veclen $R]]	
     }
+    return $l
 }
 
 proc analyze_pl { } {

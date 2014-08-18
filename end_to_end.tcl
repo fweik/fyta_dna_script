@@ -17,7 +17,7 @@ source interactions.tcl
 set time_step 0.1
 set total_int_steps 300000
 set steps_per_loop 1000
-set equilibration_loops 300
+set equilibration_loops 100
 set skin 1.0
 
 # Langevin parameters
@@ -47,7 +47,7 @@ set analyse_persistence_length "no"
 set persistence_length_file "peristence_length.dat"
 set analyse_chain_parameters "no"
 set chain_parameter_file "chain_parameters.dat"
-set analyse_end_to_end_dist "yes"
+set analyse_end_to_end_dist "no"
 set end_to_end_file "ete.dat"
 set analyse_avg_end_to_end_dist "yes"
 set avg_end_to_end_file "avg_ete.dat" 
@@ -97,15 +97,15 @@ set_charges
 set_masses $ladderlist
 
 # non-bonded IA between the sugars
-inter 0 0 lj-gen 1 1 2.5 0 4.976 -2 -4 18.773 -0.333
-inter 2 2 lj-gen 1 1 2.5 0 4.976 -2 -4 18.773 -0.333
+#inter 0 0 lj-gen 1 1 2.5 0 4.976 -2 -4 18.773 -0.333
+#inter 2 2 lj-gen 1 1 2.5 0 4.976 -2 -4 18.773 -0.333
 
 # electrostatic interactions
 set lB 561
 set lambdaDB 9.6
 set alpha [expr -14.23]
 
-setup_electrostatics $lB $lambdaDB [expr 5*$lambdaDB] $alpha
+#setup_electrostatics $lB $lambdaDB [expr 5*$lambdaDB] $alpha
 
 setup_bonded_interactions $ladderlist
 
@@ -148,8 +148,10 @@ if { $analyse_end_to_end_dist == "yes" } {
 
 if { $analyse_avg_end_to_end_dist == "yes" } {
     set samples 0
-    set e2e_avg 0.0
-    set e2e_avg2 0.0
+    set R_avg 0.0
+    set R2_avg 0.0
+    set l_avg 0.0
+    set l2_avg 0.0
 }
 
 set largest 0
@@ -175,13 +177,16 @@ for { set i 0 } { $i <= $int_loops } { incr i } {
 
     if { $analyse_end_to_end_dist == "yes" } {
 	puts $e2e [analyze_end_to_end_sq]
-	puts [analyze_end_to_end_sq]
+	puts [analyze_end_to_end_sq]	
     }
 
     if { $analyse_avg_end_to_end_dist == "yes" } {
-	set R2 [analyze_end_to_end_sq]
-	set e2e_avg [expr $e2e_avg + $R2]
-	set e2e_avg2 [expr $e2e_avg2 + $R2*$R2]
+	set R [analyze_end_to_end_sq]
+	set R_avg [expr $R_avg + $R]
+	set R2_avg [expr $R2_avg + $R*$R]
+	set l [analyze_contour_length]
+	set l_avg [expr $l_avg + $l]
+	set l2_avg [expr $l2_avg + $l*$l]
 	incr samples
     }
 
@@ -196,8 +201,11 @@ for { set i 0 } { $i <= $int_loops } { incr i } {
 
 if { $analyse_avg_end_to_end_dist == "yes" } {
     set avg_e2e_fd [open $avg_end_to_end_file "a"]
-    set mean [expr $e2e_avg/$samples]
-    puts $avg_e2e_fd "$n_basepairs $mean [expr { sqrt( $e2e_avg2 / $samples - $mean*$mean ) }]"
+    set R_mean [expr $R_avg/$samples]
+    set R_sd [expr { sqrt( $R2_avg / $samples - $R_mean*$R_mean ) }]
+    set l_mean [expr $l_avg/$samples]
+    set l_sd [expr { sqrt( $l2_avg / $samples - $l_mean*$l_mean ) }]
+    puts $avg_e2e_fd "$n_basepairs $R_mean $R_sd $l_mean $l_sd"
     close $avg_e2e_fd
 }
 
