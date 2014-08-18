@@ -57,5 +57,5 @@ proc read_sequence { filename } {
 	}
 	lappend ladderlist $line
     }
-    return ladderlist
+    return $ladderlist
 }
