@@ -14,7 +14,7 @@ source interactions.tcl
 
 # General MD parameters
 set time_step 0.1
-set total_int_steps 20000000
+set total_int_steps 200000000
 set steps_per_loop 10000
 set skin 1.0
 
@@ -39,11 +39,11 @@ set zshift 8.5
 set center_xy [expr 0.5*$box_xy]
 
 # Molecule
-set n_basepairs 50
+set n_basepairs 250
 set configuration_filename "configurations/1000bp_conf.dat"
-set sequence_filename "sequences/Sequence1.dat"
+set sequence_filename "sequences/Sequence_polyAT.dat"
 # Fix one end of molecule?
-set fix_lower_end "yes"
+set fix_lower_end "no"
 # External forces on molecule
 #Sheer force in +x direction
 set ext_force_sheer 0.0
@@ -51,10 +51,10 @@ set ext_force_sheer 0.0
 set ext_force_stretch 0.0
 
 # Analysis
-set analyse_persistence_length "no"
+set analyse_persistence_length "yes"
 set persistence_length_file "peristence_length.dat"
 set analyse_chain_parameters "no"
-set chain_parameter_file "chain_parameters.dat"
+set chain_parameter_file "/work/dholder/bachelorarbeit/githubfloh/simulationresults/chain_parameters.dat"
 
 # Set up MD
 setmd time_step $time_step
@@ -81,12 +81,16 @@ set_charges
 
 set_masses $ladderlist
 
+# # non-bonded IA between the sugars
+#inter 0 0 lj-gen 1 1 2.5 0 4.976 -2 -4 18.773 -0.333
+#inter 2 2 lj-gen 1 1 2.5 0 4.976 -2 -4 18.773 -0.333
+
 # electrostatic interactions
 set lB 561
 set lambdaDB 9.6
 set alpha [expr -14.23]
 
-#setup_electrostatics $lB $lambdaDB [expr 5*$lambdaDB] $alpha
+setup_electrostatics $lB $lambdaDB [expr 5*$lambdaDB] $alpha
 
 setup_bonded_interactions $ladderlist
 
@@ -117,15 +121,13 @@ if { $vtf == "yes" } {
 puts "Integrating $int_loops times $steps_per_loop steps."
 
 if { $analyse_persistence_length == "yes" } {
-    set pers [open "persistencePOLYseq.dat" "w"]
+    set pers [open $persistence_length_file "w"]
 }
 if { $analyse_chain_parameters == "yes" } {
-    set fo [open "averagesPOLYseq.dat" "w"]
+    set fo [open $chain_parameter_file "w"]
 }
 
 set largest 0
-
-puts "cell_grid [ setmd cell_grid ] cell_size [ setmd cell_size ] max_cut [ setmd max_cut ] max_range [ setmd max_range ] box_l [ setmd box_l ]"
 
 for { set i 0 } { $i <= $int_loops } { incr i } {
     puts "Loop $i of $int_loops, (time [format %.2g [expr $i*$time_step*$steps_per_loop]] of [format %.2g [expr $total_int_steps*$time_step]])."
@@ -148,6 +150,4 @@ for { set i 0 } { $i <= $int_loops } { incr i } {
     }
 }
 
-if { $analyse_chain_parameters == "yes" } {
-	close $fo	
-}
+close $fo

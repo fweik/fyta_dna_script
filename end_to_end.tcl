@@ -15,9 +15,9 @@ source interactions.tcl
 
 # General MD parameters
 set time_step 0.1
-set total_int_steps 300000
+set total_int_steps 500000
 set steps_per_loop 1000
-set equilibration_loops 100
+set equilibration_loops 300
 set skin 1.0
 
 # Langevin parameters
@@ -52,11 +52,16 @@ set end_to_end_file "ete.dat"
 set analyse_avg_end_to_end_dist "yes"
 set avg_end_to_end_file "avg_ete.dat" 
 
+# Electrostatics
+set lB 561
+set lambdaDB 30.0
+set alpha [expr -14.23]
+
 # Check for command lineparameters
 
 if { $argc == 3 } {
     set n_basepairs [lindex $argv 0]
-    set end_to_end_file [lindex $argv 1]
+    set lB [lindex $argv 1]
     set avg_end_to_end_file [lindex $argv 2]
 }
 
@@ -64,11 +69,11 @@ puts "n_basepairs $n_basepairs, end_to_end_file $end_to_end_file avg_end_to_end_
 
 # Box geometry
 # Length along the molecule
-set box_z [expr 4*$n_basepairs + 400.]
+set box_z [expr 4*$n_basepairs + 500.]
 # Other directions
-set box_xy 250.
+set box_xy 500.
 # Shift along molecule axis
-set zshift 200.
+set zshift 250.
 # Shift in other directions
 set center_xy [expr 0.5*$box_xy]
 
@@ -97,11 +102,7 @@ set_charges
 set_masses $ladderlist
 
 # electrostatic interactions
-set lB 561
-set lambdaDB 9.6
-set alpha [expr -14.23]
-
-#setup_electrostatics $lB $lambdaDB [expr 5*$lambdaDB] $alpha
+setup_electrostatics $lB $lambdaDB [expr 5*$lambdaDB] $alpha
 
 setup_bonded_interactions $ladderlist
 
