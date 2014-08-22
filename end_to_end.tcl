@@ -15,9 +15,9 @@ source interactions.tcl
 
 # General MD parameters
 set time_step 0.1
-set total_int_steps 500000
+set total_int_steps 2000000
 set steps_per_loop 1000
-set equilibration_loops 300
+set equilibration_loops 1000
 set skin 1.0
 
 # Langevin parameters
@@ -47,25 +47,29 @@ set analyse_persistence_length "no"
 set persistence_length_file "peristence_length.dat"
 set analyse_chain_parameters "no"
 set chain_parameter_file "chain_parameters.dat"
-set analyse_end_to_end_dist "no"
+set analyse_end_to_end_dist "yes"
 set end_to_end_file "ete.dat"
 set analyse_avg_end_to_end_dist "yes"
 set avg_end_to_end_file "avg_ete.dat" 
 
 # Electrostatics
 set lB 561
-set lambdaDB 30.0
+set lambdaDB 9.6
 set alpha [expr -14.23]
 
 # Check for command lineparameters
 
 if { $argc == 3 } {
     set n_basepairs [lindex $argv 0]
-    set lB [lindex $argv 1]
+    set lambdaDB [lindex $argv 1]
     set avg_end_to_end_file [lindex $argv 2]
+    if { $analyse_avg_end_to_end_dist == "yes" } {
+	set end_to_end_file "ete_[expr $n_basepairs]_[expr $lambdaDB].dat"
+    }
 }
 
 puts "n_basepairs $n_basepairs, end_to_end_file $end_to_end_file avg_end_to_end_file $avg_end_to_end_file"
+puts "bejrrum length $lB debye length $lambdaDB"
 
 # Box geometry
 # Length along the molecule
@@ -174,6 +178,7 @@ for { set i 0 } { $i <= $int_loops } { incr i } {
 
     if { $analyse_end_to_end_dist == "yes" } {
 	puts $e2e [analyze_end_to_end_sq]
+	flush $e2e
 	puts [analyze_end_to_end_sq]	
     }
 

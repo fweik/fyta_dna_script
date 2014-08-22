@@ -280,7 +280,7 @@ proc analyze_bps {} {
     set psi1_avg [expr $psi1_avg / $n]
     set psi2_avg [expr $psi2_avg / $n]
 
-    puts "<rcc> $rcc_avg, <rcb1> $rcb1_avg, <rcb2> $rcb2_avg, <rhb> $rhb_avg, <psi1> $psi1_avg, <psi2> $psi2_avg"
+    puts "<rcc> [format %.2f $rcc_avg], <rcb1> [format %.2f $rcb1_avg], <rcb2> [format %.2f $rcb2_avg], <rhb> [format %.2f $rhb_avg], <psi1> [format %.2f $psi1_avg], <psi2> [format %.2f $psi2_avg]"
     return [list $rcc_avg $rcb1_avg $rcb2_avg $rhb_avg $psi1_avg $psi2_avg]
 }
 
@@ -302,6 +302,11 @@ proc analyze_stacking { s1i } {
 
     set x1 [part $s2j pr pos]
     set x2 [part $s1j pr pos]
+
+    set rsi [vecadd 0.5 [part $s1i pr pos] 0.5 [part $s2i pr pos]]
+    set rsj [vecadd 0.5 [part $s1j pr pos] 0.5 [part $s2j pr pos]]
+    set rss [vecadd 1.0 $rsi -1.0 $rsj]
+    set rss_l [veclen $rss]
 
     set rccjx [expr ([lindex $x2 0] - [lindex $x1 0])]
     set rccjy [expr ([lindex $x2 1] - [lindex $x1 1])]
@@ -334,20 +339,23 @@ proc analyze_stacking { s1i } {
     
     set cos_theta [expr ($rpx*$rccix + $rpy*$rcciy + $rpz*$rcciz)/($rpl*$rccil)]
 
-    return [expr 180.*acos($cos_theta)/$Pi]
+    return [list [expr 180.*acos($cos_theta)/$Pi] $rss_l]
 }
 
 proc analyze_stacking_all {} {
     set theta_avg 0.0
+    set rss_avg 0.0
     set n 0
     for { set i 0 } { $i <= [expr [setmd max_part] - 4] } { incr i } {
 	set type [part $i pr type]
 	if { $type == 0 } {
-	    set theta_avg [expr $theta_avg + [analyze_stacking $i]]
+	    set vals [analyze_stacking $i]
+	    set theta_avg [expr $theta_avg + [lindex $vals 0]]
+	    set rss_avg [expr $rss_avg + [lindex $vals 1]]
 	    incr n
 	}    
     }
-    return [expr $theta_avg/$n]
+    return [list [expr $theta_avg/$n] [expr $rss_avg/$n]]
 }
 
 
