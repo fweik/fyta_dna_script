@@ -30,8 +30,8 @@ set vtf "yes"
 set vtf_filename "/work/fweik/dna.vtf"
 
 # Molecule
-set n_basepairs 200
-set configuration_filename "configurations/1000bp_conf.dat"
+set n_basepairs 250
+set configuration_filename "configurations/config_1000bp_31.4deg_raise4.dat"
 set sequence_filename "sequences/Sequence_polyAT.dat"
 # Fix one end of molecule?
 set fix_lower_end "no"
@@ -43,7 +43,7 @@ set ext_force_stretch 0.0
 
 # Box geometry
 # Length along the molecule
-set box_z [expr 4*$n_basepairs + 500.]
+set box_z [expr 5*$n_basepairs + 500.]
 # Other directions
 set box_xy 250.
 # Shift along molecule axis
@@ -89,7 +89,7 @@ set lB 561
 set lambdaDB 9.6
 set alpha [expr -14.23]
 
-setup_electrostatics $lB $lambdaDB [expr 5*$lambdaDB] $alpha
+setup_electrostatics $lB $lambdaDB [expr 5*$lambdaDB] $alpha $kT
 
 setup_bonded_interactions $ladderlist
 
@@ -137,6 +137,7 @@ if { $analyse_energy == "yes"} {
 for { set i 0 } { $i <= $int_loops } { incr i } {
     puts "Loop $i of $int_loops, (time [format %.2g [expr $i*$time_step*$steps_per_loop]] of [format %.2g [expr $total_int_steps*$time_step]])."
     puts [time { integrate $steps_per_loop }]
+    puts "coulomb energy [analyze energy coulomb] + [analyze energy bonded 1]"
 
     if { $analyse_energy == "yes" } {
 	set energy [analyze energy]

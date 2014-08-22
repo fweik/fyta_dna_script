@@ -105,11 +105,28 @@ proc set_masses { ladderlist } {
     }
 }
 
-proc setup_electrostatics { lB lambdaDB rcut alpha } {
+proc setup_electrostatics { lB lambdaDB rcut alpha kT } {
     set kappa [expr 1./$lambdaDB]
     set oneoveralpha [expr 1./$alpha]
+    set epsilon_int 3.0
+    set epsilon_ext 78.
 
-    inter coulomb $lB dh $kappa $rcut 78 3 4 15 $oneoveralpha
+    inter coulomb $lB dh $kappa $rcut $epsilon_int $epsilon_ext 4 13 $oneoveralpha
+    
+    puts [inter coulomb]
+    exit
+
+    inter 1 bonded_coulomb [expr $kT * $lB/$epsilon_int]
+
+    # Exclude sugars within same basepair from interacting
+    # And set up bonded electrostatics instead
+    for { set i 0 } { $i <= [setmd max_part] } { incr i } {
+	set type [part $i pr type]
+	if { $type == 0 } {
+	    part $i exclude [expr $i + 2] bond 1 [expr $i + 2]
+	    part [expr $i + 2] exclude $i
+	}
+    }
 }
 
 proc setup_bonded_interactions { ladderlist } {
