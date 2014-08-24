@@ -105,16 +105,16 @@ proc set_masses { ladderlist } {
     }
 }
 
-proc setup_electrostatics { lB lambdaDB rcut alpha kT } {
+proc setup_electrostatics { lB lambdaDB rcut kT } {
     set kappa [expr 1./$lambdaDB]
-    set oneoveralpha [expr 1./$alpha]
     set epsilon_int 3.0
     set epsilon_ext 78.
+    set r0 4.
+    set r1 13.
 
-    inter coulomb $lB dh $kappa $rcut $epsilon_int $epsilon_ext 4 13 $oneoveralpha
-    
-    puts [inter coulomb]
-    exit
+    set alpha [expr log( exp(-$kappa*$r1) * $epsilon_int / $epsilon_ext) / ($r1 - $r0)]
+
+    inter coulomb $lB dh $kappa $rcut $epsilon_int $epsilon_ext 4. 13. $alpha
 
     inter 1 bonded_coulomb [expr $kT * $lB/$epsilon_int]
 

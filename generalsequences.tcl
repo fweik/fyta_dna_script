@@ -15,14 +15,14 @@ source ./interactions.tcl
 # General MD parameters
 set time_step 0.1
 set total_int_steps 100000000
-set steps_per_loop 1000
+set steps_per_loop 10000
 set skin 1.0
 
 # Langevin parameters
 # kT = 0.025eV ~ 300K (k_B = 8.617e-5 eV/K)
 set kT 0.025
 #set kT 0.05
-set gamma 0.1
+set gamma 0.01
 
 # Output options
 set vmd "no"
@@ -30,7 +30,7 @@ set vtf "yes"
 set vtf_filename "/work/fweik/dna.vtf"
 
 # Molecule
-set n_basepairs 250
+set n_basepairs 200
 set configuration_filename "configurations/config_1000bp_31.4deg_raise4.dat"
 set sequence_filename "sequences/Sequence_polyAT.dat"
 # Fix one end of molecule?
@@ -52,12 +52,12 @@ set zshift 250.
 set center_xy [expr 0.5*$box_xy]
 
 # Analysis
-set analyse_persistence_length "no"
-set persistence_length_file "peristence_length.dat"
+set analyse_persistence_length "yes"
+set persistence_length_file "/work/fweik/peristence_length.dat"
 set analyse_chain_parameters "yes"
-set chain_parameter_file "chain_parameters.dat"
-set analyse_energy "no"
-set energy_file "energy.dat"
+set chain_parameter_file "/work/fweik/chain_parameters.dat"
+set analyse_energy "yes"
+set energy_file "/work/fweik/energy.dat"
 
 # Set up MD
 setmd time_step $time_step
@@ -89,7 +89,7 @@ set lB 561
 set lambdaDB 9.6
 set alpha [expr -14.23]
 
-setup_electrostatics $lB $lambdaDB [expr 5*$lambdaDB] $alpha $kT
+setup_electrostatics $lB $lambdaDB [expr 5*$lambdaDB] $kT
 
 setup_bonded_interactions $ladderlist
 
@@ -120,10 +120,10 @@ if { $vtf == "yes" } {
 puts "Integrating $int_loops times $steps_per_loop steps."
 
 if { $analyse_persistence_length == "yes" } {
-    set pers [open "persistencePOLYseq.dat" "w"]
+    set pers [open $persistence_length_file "w"]
 }
 if { $analyse_chain_parameters == "yes" } {
-    set fo [open "averagesPOLYseq.dat" "w"]
+    set fo [open $chain_parameter_file "w"]
 }
 
 set largest 0
@@ -131,18 +131,26 @@ set largest 0
 puts "cell_grid [ setmd cell_grid ] cell_size [ setmd cell_size ] max_cut [ setmd max_cut ] max_range [ setmd max_range ] box_l [ setmd box_l ]"
 
 if { $analyse_energy == "yes"} {
-    set energy_fd [open "energy.dat" "w"]
+    set energy_fd [open $energy_file "w"]
+    puts $energy_fd "#total coulomb angular basepair stacking kinetic backbone"
 }
 
 for { set i 0 } { $i <= $int_loops } { incr i } {
     puts "Loop $i of $int_loops, (time [format %.2g [expr $i*$time_step*$steps_per_loop]] of [format %.2g [expr $total_int_steps*$time_step]])."
     puts [time { integrate $steps_per_loop }]
-    puts "coulomb energy [analyze energy coulomb] + [analyze energy bonded 1]"
 
     if { $analyse_energy == "yes" } {
-	set energy [analyze energy]
-	puts $energy
-	puts $energy_fd $energy
+	set coulomb [expr [analyze energy coulomb] + [analyze energy bonded 1]]
+	set backbone [analyze energy bonded 0]
+	set angular [expr [analyze energy bonded 111] + [analyze energy bonded 112] + [analyze energy bonded 121] + [analyze energy bonded 122] + [analyze energy bonded 131] + [analyze energy bonded 132] + [analyze energy bonded 141] + [analyze energy bonded 142]]
+
+	set basepair [expr [analyze energy bonded 211] + [analyze energy bonded 212] + [analyze energy bonded 221] + [analyze energy bonded 222]]
+	set total [analyze energy total]
+	set stacking [expr [analyze energy bonded 312]]
+	set kinetic [analyze energy kinetic]
+
+	puts "total $total coulomb $coulomb angular $angular basepair $basepair stacking $stacking kinetic $kinetic backbone $backbone"
+	puts $energy_fd "$total $coulomb $angular $basepair $stacking $kinetic $backbone"
 	flush $energy_fd
     }
 
@@ -173,4 +181,8 @@ if { $analyse_energy } {
 
 if { $analyse_chain_parameters == "yes" } {
 	close $fo	
+}
+
+if { $analyse_persistence_length == "yes" } {
+    close $pers
 }
