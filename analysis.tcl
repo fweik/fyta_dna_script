@@ -292,13 +292,11 @@ proc analyze_stacking { s1i } {
     set s1j [expr $s1i + 4]
     set s2j [expr $s1i + 6]
 
-    set x1 [part $s2i pr pos]
-    set x2 [part $s1i pr pos]
+    set rs2i [part $s2i pr pos]
+    set rs1i [part $s1i pr pos]
 
-    set rccix [expr ([lindex $x2 0] - [lindex $x1 0])]
-    set rcciy [expr ([lindex $x2 1] - [lindex $x1 1])]
-    set rcciz [expr ([lindex $x2 2] - [lindex $x1 2])]
-    set rccil [expr sqrt($rccix*$rccix + $rcciy*$rcciy + $rcciz*$rcciz)]
+    set rcci [vecadd 1.0 $rs1i -1.0 $rs2i]
+    set rccil [veclen $rcci]
 
     set x1 [part $s2j pr pos]
     set x2 [part $s1j pr pos]
