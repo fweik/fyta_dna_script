@@ -22,7 +22,7 @@ set skin 1.0
 # kT = 0.025eV ~ 300K (k_B = 8.617e-5 eV/K)
 set kT 0.025
 #set kT 0.05
-set gamma 0.01
+set gamma 10.
 
 # Output options
 set vmd "no"
@@ -30,7 +30,7 @@ set vtf "yes"
 set vtf_filename "dna.vtf"
 
 # Molecule
-set n_basepairs 200
+set n_basepairs 250
 set configuration_filename "configurations/config_1000bp_31.4deg_raise4.dat"
 set sequence_filename "sequences/Sequence_polyAT.dat"
 # Fix one end of molecule?
@@ -52,11 +52,11 @@ set zshift 250.
 set center_xy [expr 0.5*$box_xy]
 
 # Analysis
-set analyse_persistence_length "yes"
+set analyse_persistence_length "no"
 set persistence_length_file "peristence_length.dat"
 set analyse_chain_parameters "yes"
 set chain_parameter_file "chain_parameters.dat"
-set analyse_energy "yes"
+set analyse_energy "no"
 set energy_file "energy.dat"
 
 # Set up MD
@@ -86,6 +86,7 @@ set_masses $ladderlist
 
 # electrostatic interactions
 set lB 561
+#set lB 0.0
 set lambdaDB 9.6
 
 setup_electrostatics $lB $lambdaDB [expr 5*$lambdaDB] $kT
@@ -159,7 +160,7 @@ for { set i 0 } { $i <= $int_loops } { incr i } {
 	set stacking [analyze_stacking_all]
 	puts $fo "[analyze_bps] $stacking"
 	flush $fo
-	puts "<theta_tw> [format %.2f [lindex $stacking 0]] <rss> [format %.2f [lindex $stacking 1]] <theta_tilt> [format %.2f [lindex $stacking 2]]"
+	puts "<theta_tw> [format %.2f [lindex $stacking 0]] <rss> [format %.2f [lindex $stacking 1]] <theta_tilt> [format %.2f [lindex $stacking 2]] <r_st> [format %.2f [lindex $stacking 3]] <theta1_3> [format %.2f [lindex $stacking 4]] <theta1_5> [format %.2f [lindex $stacking 5]] <theta2_3> [format %.2f [lindex $stacking 6]] <theta2_5> [format %.2f [lindex $stacking 7]]"
     }
 
     if { $analyse_persistence_length == "yes" } {

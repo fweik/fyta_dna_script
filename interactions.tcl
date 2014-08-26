@@ -116,7 +116,9 @@ proc setup_electrostatics { lB lambdaDB rcut kT } {
 
     inter coulomb $lB dh $kappa $rcut $epsilon_int $epsilon_ext 4. 13. $alpha
 
-    inter 1 bonded_coulomb [expr $kT*$lB/$epsilon_int]
+    set k_coulomb [expr $kT*$lB/$epsilon_int]
+
+    inter 1 bonded_coulomb  $k_coulomb
 
     # Exclude sugars within same basepair from interacting
     # And set up bonded electrostatics instead
