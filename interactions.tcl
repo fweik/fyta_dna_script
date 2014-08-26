@@ -116,7 +116,7 @@ proc setup_electrostatics { lB lambdaDB rcut kT } {
 
     inter coulomb $lB dh $kappa $rcut $epsilon_int $epsilon_ext 4. 13. $alpha
 
-    inter 1 bonded_coulomb [expr $kT * $lB/$epsilon_int]
+    inter 1 bonded_coulomb [expr $kT*$lB/$epsilon_int]
 
     # Exclude sugars within same basepair from interacting
     # And set up bonded electrostatics instead
@@ -362,7 +362,7 @@ proc setup_bonded_interactions { ladderlist } {
 		    # Stacking interaction
 		    # The order is s1 b1 b2 s2 s1 b1 b2 s2, different from the conf file
 		    if { $t == 6 } {
-			part $i bond 323 [expr $i+1] [expr $i+3] [expr $i+2] [expr $i+4] [expr $i+5] [expr $i+7] [expr $i+6]
+			#part $i bond 323 [expr $i+1] [expr $i+3] [expr $i+2] [expr $i+4] [expr $i+5] [expr $i+7] [expr $i+6]
 		    }
 		    if { $t == 7 } {
 			part $i bond 319 [expr $i+1] [expr $i+3] [expr $i+2] [expr $i+4] [expr $i+5] [expr $i+7] [expr $i+6]

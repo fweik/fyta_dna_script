@@ -14,8 +14,8 @@ source ./interactions.tcl
 
 # General MD parameters
 set time_step 0.1
-set total_int_steps 100000000
-set steps_per_loop 10000
+set total_int_steps 10000000
+set steps_per_loop 1000
 set skin 1.0
 
 # Langevin parameters
@@ -27,7 +27,7 @@ set gamma 0.01
 # Output options
 set vmd "no"
 set vtf "yes"
-set vtf_filename "/work/fweik/dna.vtf"
+set vtf_filename "dna.vtf"
 
 # Molecule
 set n_basepairs 200
@@ -53,11 +53,11 @@ set center_xy [expr 0.5*$box_xy]
 
 # Analysis
 set analyse_persistence_length "yes"
-set persistence_length_file "/work/fweik/peristence_length.dat"
+set persistence_length_file "peristence_length.dat"
 set analyse_chain_parameters "yes"
-set chain_parameter_file "/work/fweik/chain_parameters.dat"
+set chain_parameter_file "chain_parameters.dat"
 set analyse_energy "yes"
-set energy_file "/work/fweik/energy.dat"
+set energy_file "energy.dat"
 
 # Set up MD
 setmd time_step $time_step
@@ -87,7 +87,6 @@ set_masses $ladderlist
 # electrostatic interactions
 set lB 561
 set lambdaDB 9.6
-set alpha [expr -14.23]
 
 setup_electrostatics $lB $lambdaDB [expr 5*$lambdaDB] $kT
 
@@ -97,6 +96,8 @@ if { $fix_lower_end == "yes" } {
     part 0 fix
     part 2 fix
 }
+
+integrate 0
 
 for { set i 0 } { $i <= [setmd max_part] } { incr i } {
     puts [part $i]
@@ -158,7 +159,7 @@ for { set i 0 } { $i <= $int_loops } { incr i } {
 	set stacking [analyze_stacking_all]
 	puts $fo "[analyze_bps] $stacking"
 	flush $fo
-	puts "<theta_tw> [format %.2f [lindex $stacking 0]] <rss> [format %.2f [lindex $stacking 1]]"
+	puts "<theta_tw> [format %.2f [lindex $stacking 0]] <rss> [format %.2f [lindex $stacking 1]] <theta_tilt> [format %.2f [lindex $stacking 2]]"
     }
 
     if { $analyse_persistence_length == "yes" } {

@@ -30,6 +30,14 @@ proc veclen {v1} {
     return [expr { sqrt( [vecdot $v1 $v1] ) }]
 }
 
+proc veccross {v1 v2} {
+    lappend ret [expr [lindex $v1 1]*[lindex $v2 2] - [lindex $v1 2]*[lindex $v2 1]]
+    lappend ret [expr [lindex $v1 2]*[lindex $v2 0] - [lindex $v1 0]*[lindex $v2 2]]
+    lappend ret [expr [lindex $v1 0]*[lindex $v2 1] - [lindex $v1 1]*[lindex $v2 0]]
+    
+    return $ret
+}
+
 proc analyze_end_to_end_sq { } {
     set s1b 0
     set s2b 2
@@ -289,71 +297,89 @@ proc analyze_stacking { s1i } {
 
     set s2i [expr $s1i + 2]
     set b1i [expr $s1i + 1]
+    set b2i [expr $s1i + 3]
     set s1j [expr $s1i + 4]
+    set b1j [expr $s1i + 5]
     set s2j [expr $s1i + 6]
+    set b2j [expr $s1i + 7]
 
     set rs2i [part $s2i pr pos]
     set rs1i [part $s1i pr pos]
+    set rb2i [part $b2i pr pos]
+    set rb1i [part $b1i pr pos]
+
+    set rs2j [part $s2j pr pos]
+    set rs1j [part $s1j pr pos]
+    set rb2j [part $b2j pr pos]
+    set rb1j [part $b1j pr pos]
 
     set rcci [vecadd 1.0 $rs1i -1.0 $rs2i]
-    set rccil [veclen $rcci]
+    set rcci_l [veclen $rcci]
 
-    set x1 [part $s2j pr pos]
-    set x2 [part $s1j pr pos]
-
-    set rsi [vecadd 0.5 [part $s1i pr pos] 0.5 [part $s2i pr pos]]
-    set rsj [vecadd 0.5 [part $s1j pr pos] 0.5 [part $s2j pr pos]]
+    set rccj [vecadd 1.0 $rs1j -1.0 $rs2j]
+    set rccj_l [veclen $rccj]
+   
+    set rsi [vecadd 0.5 $rs1i 0.5 $rs2i]
+    set rsj [vecadd 0.5 $rs1j 0.5 $rs2j]
     set rss [vecadd 1.0 $rsi -1.0 $rsj]
     set rss_l [veclen $rss]
 
-    set rccjx [expr ([lindex $x2 0] - [lindex $x1 0])]
-    set rccjy [expr ([lindex $x2 1] - [lindex $x1 1])]
-    set rccjz [expr ([lindex $x2 2] - [lindex $x1 2])]
-    set rccjl [expr sqrt($rccjx*$rccjx + $rccjy*$rccjy + $rccjz*$rccjz)]
+    set rss1 [vecadd 1.0 $rs1i -1.0 $rs1j]
+    set rss2 [vecadd 1.0 $rs2i -1.0 $rs2j]
+    set rss1_l [veclen $rss1]
+    set rss2_l [veclen $rss2]
 
-    set x1 [part $b1i pr pos]
-    set x2 [part $s1i pr pos]
-    set dxcb [expr ([lindex $x2 0] - [lindex $x1 0])]
-    set dycb [expr ([lindex $x2 1] - [lindex $x1 1])]
-    set dzcb [expr ([lindex $x2 2] - [lindex $x1 2])]
-    set rcb1 [expr sqrt($dxcb*$dxcb + $dycb*$dycb + $dzcb*$dzcb)]
+    set rcb1i [vecadd 1.0 $rs1i -1.0 $rb1i]
+    set rcb1i_l [veclen $rcb1i]
+
+    set rcb2i [vecadd 1.0 $rs1i -1.0 $rb1i]
+    set rcb2i_l [veclen $rcb1i]
+
+    set rcb1j [vecadd 1.0 $rs1j -1.0 $rb1j]
+    set rcb1j_l [veclen $rcb1j]
+
+    set rcb2j [vecadd 1.0 $rs1j -1.0 $rb1j]
+    set rcb2j_l [veclen $rcb1j]
+
+    set n1i [veccross $rcci $rcb1i]
+    set n2i [veccross $rcci $rcb2i]
+    set n1j [veccross $rccj $rcb1j]
+    set n2j [veccross $rccj $rcb2j]
+    set n1i_l [veclen $n1i]
+
+    set ani [vecadd 0.5 $n1i 0.5 $n2i]
+    set anj [vecadd 0.5 $n1j 0.5 $n2j]
+    set ani_l [veclen $ani]
+    set anj_l [veclen $anj]
+
+    set cos_tilt [expr [vecdot $ani $anj]/($ani_l*$anj_l)]
+
+    set rccj_parallel [expr [vecdot $n1i $rccj]/$n1i_l]
     
-    # n1 = rcci x rcb1
-    set nx [expr $rcciy*$dzcb - $rcciz*$dycb]
-    set ny [expr $rcciz*$dxcb - $rccix*$dzcb]
-    set nz [expr $rccix*$dycb - $rcciy*$dxcb]
-    set nl [expr sqrt($nx*$nx + $ny*$ny + $nz*$nz)]
-
-    set nx [expr $nx/$nl]
-    set ny [expr $ny/$nl]
-    set nz [expr $nz/$nl]
-
-    set rccj_parallel [expr ($nx*$rccjx+$ny*$rccjy+$nz*$rccjz)]
+    set rp [vecadd 1.0 $rccj [expr -$rccj_parallel] $n1i]
+    set rp_l [veclen $rp]
     
-    set rpx [expr $rccjx - $rccj_parallel*$nx]
-    set rpy [expr $rccjy - $rccj_parallel*$ny]
-    set rpz [expr $rccjz - $rccj_parallel*$nz]
-    set rpl [expr sqrt($rpx*$rpx + $rpy*$rpy + $rpz*$rpz)]
-    
-    set cos_theta [expr ($rpx*$rccix + $rpy*$rcciy + $rpz*$rcciz)/($rpl*$rccil)]
+    set cos_theta [expr [vecdot $rp $rcci] /($rp_l*$rcci_l)]
 
-    return [list [expr 180.*acos($cos_theta)/$Pi] $rss_l]
+    return [list [expr 180.*acos($cos_theta)/$Pi] [expr 0.5*($rss1_l+$rss2_l)] [expr 180.*acos($cos_tilt)/$Pi ]]
 }
 
 proc analyze_stacking_all {} {
-    set theta_avg 0.0
+    set theta_twist_avg 0.0
     set rss_avg 0.0
+    set theta_tilt_avg 0.0
     set n 0
     for { set i 0 } { $i <= [expr [setmd max_part] - 4] } { incr i } {
 	set type [part $i pr type]
 	if { $type == 0 } {
 	    set vals [analyze_stacking $i]
-	    set theta_avg [expr $theta_avg + [lindex $vals 0]]
+	    set theta_twist_avg [expr $theta_twist_avg + [lindex $vals 0]]
 	    set rss_avg [expr $rss_avg + [lindex $vals 1]]
+	    set theta_tilt_avg [expr $theta_tilt_avg + [lindex $vals 2]]
 	    incr n
 	}    
     }
-    return [list [expr $theta_avg/$n] [expr $rss_avg/$n]]
+    return [list [expr $theta_twist_avg/$n] [expr $rss_avg/$n] [expr $theta_tilt_avg/$n]]
 }
 
 
