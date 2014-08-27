@@ -8,29 +8,30 @@
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. 
 #
 
-source ./io.tcl
-source ./analysis.tcl
-source ./interactions.tcl
+source ../io.tcl
+source ../analysis.tcl
+source ../interactions.tcl
 
 # General MD parameters
 set time_step 0.1
 set total_int_steps 10000000
 set steps_per_loop 1000
 set skin 1.0
+t_random seed [expr 4*[pid]] [expr 9*[pid]] [expr 13*[pid]]
 
 # Langevin parameters
 # kT = 0.025eV ~ 300K (k_B = 8.617e-5 eV/K)
 set kT 0.025
 #set kT 0.05
-set gamma 10.
+set gamma 0.1
 
 # Output options
 set vmd "no"
-set vtf "yes"
+set vtf "no"
 set vtf_filename "dna.vtf"
 
 # Molecule
-set n_basepairs 250
+set n_basepairs 100
 set configuration_filename "configurations/config_1000bp_31.4deg_raise4.dat"
 set sequence_filename "sequences/Sequence_polyAT.dat"
 # Fix one end of molecule?
@@ -52,12 +53,14 @@ set zshift 250.
 set center_xy [expr 0.5*$box_xy]
 
 # Analysis
-set analyse_persistence_length "no"
+set analyse_persistence_length "yes"
 set persistence_length_file "peristence_length.dat"
-set analyse_chain_parameters "yes"
+set analyse_chain_parameters "no"
 set chain_parameter_file "chain_parameters.dat"
 set analyse_energy "no"
 set energy_file "energy.dat"
+set analyse_end_to_end_dist "yes"
+set end_to_end_file "ete.dat"
 
 # Set up MD
 setmd time_step $time_step
@@ -128,6 +131,10 @@ if { $analyse_chain_parameters == "yes" } {
     set fo [open $chain_parameter_file "w"]
 }
 
+if { $analyse_end_to_end_dist == "yes" } {
+    set e2e [open $end_to_end_file "w"]    
+}
+
 set largest 0
 
 puts "cell_grid [ setmd cell_grid ] cell_size [ setmd cell_size ] max_cut [ setmd max_cut ] max_range [ setmd max_range ] box_l [ setmd box_l ]"
@@ -154,6 +161,12 @@ for { set i 0 } { $i <= $int_loops } { incr i } {
 	puts "total $total coulomb $coulomb angular $angular basepair $basepair stacking $stacking kinetic $kinetic backbone $backbone"
 	puts $energy_fd "$total $coulomb $angular $basepair $stacking $kinetic $backbone"
 	flush $energy_fd
+    }
+
+    if { $analyse_end_to_end_dist == "yes" } {
+	puts $e2e [analyze_end_to_end_sq]
+	flush $e2e
+	puts [analyze_end_to_end_sq]	
     }
 
     if { $analyse_chain_parameters == "yes" } {
@@ -187,4 +200,8 @@ if { $analyse_chain_parameters == "yes" } {
 
 if { $analyse_persistence_length == "yes" } {
     close $pers
+}
+
+if { $analyse_end_to_end_dist == "yes" } {
+    close $e2e     
 }
