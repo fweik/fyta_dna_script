@@ -8,16 +8,16 @@
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. 
 #
 
-source ../io.tcl
-source ../analysis.tcl
-source ../interactions.tcl
+source ./io.tcl
+source ./analysis.tcl
+source ./interactions.tcl
 
 # General MD parameters
 set time_step 0.1
 set total_int_steps 10000000
 set steps_per_loop 1000
 set skin 1.0
-t_random seed [expr 4*[pid]] [expr 9*[pid]] [expr 13*[pid]]
+t_random seed [expr 4*[pid]] [expr 9*[pid]] [expr 13*[pid]] [expr 27*[pid]] [expr 11*[pid]] [expr 145*[pid]] [expr 2*[pid]] [expr 7*[pid]] [expr 31*[pid]]
 
 # Langevin parameters
 # kT = 0.025eV ~ 300K (k_B = 8.617e-5 eV/K)
@@ -27,11 +27,11 @@ set gamma 0.1
 
 # Output options
 set vmd "no"
-set vtf "no"
+set vtf "yes"
 set vtf_filename "dna.vtf"
 
 # Molecule
-set n_basepairs 100
+set n_basepairs 50
 set configuration_filename "configurations/config_1000bp_31.4deg_raise4.dat"
 set sequence_filename "sequences/Sequence_polyAT.dat"
 # Fix one end of molecule?
@@ -41,6 +41,8 @@ set fix_lower_end "no"
 set ext_force_sheer 0.0
 #Stretch force in +z direction
 set ext_force_stretch 0.0
+#ext torqe about +z axis
+set ext_torque 0.0
 
 # Box geometry
 # Length along the molecule
@@ -53,14 +55,16 @@ set zshift 250.
 set center_xy [expr 0.5*$box_xy]
 
 # Analysis
-set analyse_persistence_length "yes"
+set analyse_persistence_length "no"
 set persistence_length_file "peristence_length.dat"
 set analyse_chain_parameters "no"
 set chain_parameter_file "chain_parameters.dat"
 set analyse_energy "no"
 set energy_file "energy.dat"
-set analyse_end_to_end_dist "yes"
+set analyse_end_to_end_dist "no"
 set end_to_end_file "ete.dat"
+set write_trajectory "yes"
+set trajectory_file "trajectory.dat"
 
 # Set up MD
 setmd time_step $time_step
@@ -135,6 +139,10 @@ if { $analyse_end_to_end_dist == "yes" } {
     set e2e [open $end_to_end_file "w"]    
 }
 
+if { $write_trajectory == "yes" } {
+    set trajectory_fd [open $trajectory_file "w"]
+}
+
 set largest 0
 
 puts "cell_grid [ setmd cell_grid ] cell_size [ setmd cell_size ] max_cut [ setmd max_cut ] max_range [ setmd max_range ] box_l [ setmd box_l ]"
@@ -181,6 +189,10 @@ for { set i 0 } { $i <= $int_loops } { incr i } {
 	flush $pers
     }
 
+    if { $write_trajectory == "yes" } {
+	write_configuration $trajectory_fd
+    }
+
     if { $vmd == "yes" } { 
 	imd positions
     }
@@ -204,4 +216,8 @@ if { $analyse_persistence_length == "yes" } {
 
 if { $analyse_end_to_end_dist == "yes" } {
     close $e2e     
+}
+
+if { $write_trajectory == "yes" } {
+    close $trajectory_fd
 }

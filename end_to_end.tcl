@@ -55,7 +55,6 @@ set avg_end_to_end_file "avg_ete.dat"
 # Electrostatics
 set lB 561
 set lambdaDB 9.6
-set alpha [expr -14.23]
 
 # Check for command lineparameters
 
@@ -106,7 +105,7 @@ set_charges
 set_masses $ladderlist
 
 # electrostatic interactions
-setup_electrostatics $lB $lambdaDB [expr 5*$lambdaDB] $alpha
+setup_electrostatics $lB $lambdaDB [expr 5*$lambdaDB] $kT
 
 setup_bonded_interactions $ladderlist
 

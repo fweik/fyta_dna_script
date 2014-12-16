@@ -8,6 +8,12 @@
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. 
 #
 
+proc write_configuration { fd } {
+    for { set i 0 } { $i <= [setmd max_part] } { incr i } {
+	puts $fd [part $i pr pos]
+    }
+}
+
 proc read_configuration { n_basepairs filename } {
     set v1 0
     set v2 0
@@ -40,7 +46,7 @@ proc read_configuration { n_basepairs filename } {
 	}
     }
     if { $lastid != $n_particles } {
-	puts "Not enough particles in file '$filename' to read [expr $n_basepairs/4] basepairs."
+	puts "Not enough particles in file '$filename' to read [expr $n_particles] basepairs."
 	exit
     }   
 }
