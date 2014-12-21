@@ -12,14 +12,6 @@ source ./io.tcl
 source ./analysis.tcl
 source ./interactions.tcl
 
-set parameterlist {
-    { n_basepairs 50 }
-}
-
-source "./toolbox/toolbox.tcl"
-init_toolbox "./toolbox"
-init_parameters $parameterlist
-
 # General MD parameters
 set time_step 0.1
 set total_int_steps 10000000
@@ -39,6 +31,7 @@ set vtf "yes"
 set vtf_filename "dna.vtf"
 
 # Molecule
+set n_basepairs 50
 set configuration_filename "configurations/config_1000bp_31.4deg_raise4.dat"
 set sequence_filename "sequences/Sequence_polyAT.dat"
 # Fix one end of molecule?
