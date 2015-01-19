@@ -14,6 +14,15 @@ source ./interactions.tcl
 
 set parameterlist {
     { n_basepairs 50 }
+    # External torque on the end of the chain
+    { ext_torque 0.0 }
+    # External stretching force on the chain
+    { ext_force_stretch 0.0 }
+    # Fix head of chain
+    { fix_lower_end "no" }
+    # Warmup loops
+    { warmup_loops 1000 }
+    { cellsystem "layered" }
 }
 
 source "./toolbox/toolbox.tcl"
@@ -41,15 +50,9 @@ set vtf_filename "dna.vtf"
 # Molecule
 set configuration_filename "configurations/config_1000bp_31.4deg_raise4.dat"
 set sequence_filename "sequences/Sequence_polyAT.dat"
-# Fix one end of molecule?
-set fix_lower_end "no"
 # External forces on molecule
 #Sheer force in +x direction
 set ext_force_sheer 0.0
-#Stretch force in +z direction
-set ext_force_stretch 0.0
-#ext torqe about +z axis
-set ext_torque 0.0
 
 # Box geometry
 # Length along the molecule
@@ -68,9 +71,9 @@ set analyse_chain_parameters "no"
 set chain_parameter_file "chain_parameters.dat"
 set analyse_energy "no"
 set energy_file "energy.dat"
-set analyse_end_to_end_dist "no"
+set analyse_end_to_end_dist "yes"
 set end_to_end_file "ete.dat"
-set write_trajectory "yes"
+set write_trajectory "no"
 set trajectory_file "trajectory.dat"
 
 # Set up MD
@@ -78,7 +81,7 @@ setmd time_step $time_step
 thermostat langevin $kT $gamma
 setmd skin $skin
 setmd box_l $box_xy $box_xy $box_z
-cellsystem layered
+cellsystem $cellsystem
 set int_loops [expr $total_int_steps/$steps_per_loop]
 
 # Read config
@@ -112,10 +115,22 @@ if { $fix_lower_end == "yes" } {
     part 2 fix
 }
 
-integrate 0
+if { $ext_force_stretch > 0.0 } {
+    part [expr [setmd max_part] - 1] ext_force 0 0 $ext_force_stretch
+    part [expr [setmd max_part] - 3] ext_force 0 0 $ext_force_stretch
+}
 
 for { set i 0 } { $i <= [setmd max_part] } { incr i } {
     puts [part $i]
+}
+
+# Warmup integration
+
+puts "Integrating $warmup_loops times $steps_per_loop steps."
+for { set i 0 } { $i < $warmup_loops } { incr i } {
+    puts "Warmup $i of $warmup_loops."
+    integrate $steps_per_loop
+    puts "Energy [analyze energy total] End-to-end distance [expr [analyze_end_to_end_sq]**0.5]"
 }
 
 # Prepare output
