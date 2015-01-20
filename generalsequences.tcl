@@ -23,6 +23,10 @@ set parameterlist {
     # Warmup loops
     { warmup_loops 1000 }
     { cellsystem "layered" }
+    { analyze_ent_to_end_dist "yes" }
+    { end_to_end_file "ete.dat" }
+    { total_int_steps 10000000 }
+    { time_step 0.1 }
 }
 
 source "./toolbox/toolbox.tcl"
@@ -30,8 +34,6 @@ init_toolbox "./toolbox"
 init_parameters $parameterlist
 
 # General MD parameters
-set time_step 0.1
-set total_int_steps 10000000
 set steps_per_loop 1000
 set skin 1.0
 t_random seed [expr 4*[pid]] [expr 9*[pid]] [expr 13*[pid]] [expr 27*[pid]] [expr 11*[pid]] [expr 145*[pid]] [expr 2*[pid]] [expr 7*[pid]] [expr 31*[pid]]
@@ -56,11 +58,11 @@ set ext_force_sheer 0.0
 
 # Box geometry
 # Length along the molecule
-set box_z [expr 5*$n_basepairs + 500.]
+set box_z [expr 5*$n_basepairs + 100.]
 # Other directions
-set box_xy 250.
+set box_xy 100.
 # Shift along molecule axis
-set zshift 250.
+set zshift 50.
 # Shift in other directions
 set center_xy [expr 0.5*$box_xy]
 
@@ -71,8 +73,6 @@ set analyse_chain_parameters "no"
 set chain_parameter_file "chain_parameters.dat"
 set analyse_energy "no"
 set energy_file "energy.dat"
-set analyse_end_to_end_dist "yes"
-set end_to_end_file "ete.dat"
 set write_trajectory "no"
 set trajectory_file "trajectory.dat"
 
@@ -115,9 +115,54 @@ if { $fix_lower_end == "yes" } {
     part 2 fix
 }
 
-if { $ext_force_stretch > 0.0 } {
-    part [expr [setmd max_part] - 1] ext_force 0 0 $ext_force_stretch
-    part [expr [setmd max_part] - 3] ext_force 0 0 $ext_force_stretch
+for { set i 0 } { $i <= [setmd max_part] } { incr i } {
+    puts [part $i]
+}
+
+if { ($ext_force_stretch > 0.0) || ( $ext_torque > 0.0 ) } {
+    set colloid_z_dist 10.0
+    set colloid_k 2.0
+    inter 2 harmonic $colloid_k $colloid_z_dist
+    inter 3 virtual_bond
+
+    # Setup harness
+    set last_base_id_left [expr [setmd max_part] - 3]
+    set last_base_id_right [expr [setmd max_part] - 1]
+    
+    set last_base_left_pos [part $last_base_id_left pr pos]
+    set last_base_right_pos [part $last_base_id_right pr pos]
+
+    setmd min_global_cut 6.0
+
+    puts "last_base_id_left $last_base_id_left last_base_id_right $last_base_id_right"
+    puts "last_base_left_pos $last_base_left_pos"
+    puts "last_base_right_pos $last_base_right_pos"
+
+    set lastid [setmd max_part]
+    incr lastid
+    part $lastid pos [expr 0.5*([lindex $last_base_left_pos 0] + [lindex $last_base_right_pos 0])] [expr 0.5*([lindex $last_base_left_pos 1] + [lindex $last_base_right_pos 1])] [expr 0.5*([lindex $last_base_left_pos 2] + [lindex $last_base_right_pos 2]) + $colloid_z_dist] type 5 fix 1 1 1 rinertia 1000 1000 1000
+
+    if { $ext_force_stretch > 0.0 } {
+	part $lastid ext_force 0 0 $ext_force_stretch
+    }
+
+    if { $ext_torque > 0.0 } {
+	part $lastid ext_torque 0 0 $ext_torque
+    }
+
+    incr lastid
+
+    part $lastid pos [lindex $last_base_left_pos 0] [lindex $last_base_left_pos 1] [expr [lindex $last_base_left_pos 2] + $colloid_z_dist] bond 2 $last_base_id_left virtual 1 vs_auto_relate_to [expr $lastid - 1] bond 3 [expr $lastid - 1] type 5
+
+    incr lastid
+    part $lastid pos [lindex $last_base_right_pos 0] [lindex $last_base_right_pos 1] [expr [lindex $last_base_right_pos 2] + $colloid_z_dist] bond 2 $last_base_id_right virtual 1 vs_auto_relate_to [expr $lastid - 2] bond 3 [expr $lastid - 2] type 5
+
+    if { $ext_torque > 0.0 } {
+	# Disable rotation on dna particles
+	for { set i 0 } { $i <= [expr [setmd max_part] - 3] } { incr i } {
+	    part $i rotation 0
+	}
+    }
 }
 
 for { set i 0 } { $i <= [setmd max_part] } { incr i } {
@@ -157,7 +202,7 @@ if { $analyse_chain_parameters == "yes" } {
     set fo [open $chain_parameter_file "w"]
 }
 
-if { $analyse_end_to_end_dist == "yes" } {
+if { $analyze_ent_to_end_dist == "yes" } {
     set e2e [open $end_to_end_file "w"]    
 }
 
@@ -193,7 +238,7 @@ for { set i 0 } { $i <= $int_loops } { incr i } {
 	flush $energy_fd
     }
 
-    if { $analyse_end_to_end_dist == "yes" } {
+    if { $analyze_ent_to_end_dist == "yes" } {
 	puts $e2e [analyze_end_to_end_sq]
 	flush $e2e
 	puts [analyze_end_to_end_sq]	
@@ -236,7 +281,7 @@ if { $analyse_persistence_length == "yes" } {
     close $pers
 }
 
-if { $analyse_end_to_end_dist == "yes" } {
+if { $analyze_ent_to_end_dist == "yes" } {
     close $e2e     
 }
 
